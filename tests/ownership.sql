@@ -1,0 +1,31 @@
+begin;
+insert into auth.users(id,email,raw_user_meta_data) values ('11111111-1111-4111-8111-111111111111','rls-fixture-a@example.com','{"name":"RLS fixture A"}'),('22222222-2222-4222-8222-222222222222','rls-fixture-b@example.com','{"name":"RLS fixture B"}');
+insert into public.issues(id,owner_id,title,description) values ('33333333-3333-4333-8333-333333333333','11111111-1111-4111-8111-111111111111','Fixture issue','Temporary ownership test');
+insert into public.tasks(id,owner_id,assignee_id,title,description) values ('44444444-4444-4444-8444-444444444444','11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222','Fixture task','Temporary ownership test');
+insert into public.comments(id,owner_id,task_id,body) values ('55555555-5555-4555-8555-555555555555','11111111-1111-4111-8111-111111111111','44444444-4444-4444-8444-444444444444','Fixture comment');
+set local role authenticated;
+set local request.jwt.claim.sub='11111111-1111-4111-8111-111111111111';
+do $$ declare n integer; denied boolean; begin
+update public.profiles set phone='555-0100' where id='11111111-1111-4111-8111-111111111111'; get diagnostics n=row_count; assert n=1,'Own profile update failed';
+update public.issues set status='closed' where id='33333333-3333-4333-8333-333333333333'; get diagnostics n=row_count; assert n=1,'Own issue update failed';
+update public.tasks set status='done' where id='44444444-4444-4444-8444-444444444444'; get diagnostics n=row_count; assert n=1,'Own task update failed';
+update public.comments set body='Edited by owner' where id='55555555-5555-4555-8555-555555555555'; get diagnostics n=row_count; assert n=1,'Own comment update failed';
+denied:=false; begin update public.tasks set owner_id='22222222-2222-4222-8222-222222222222' where id='44444444-4444-4444-8444-444444444444'; exception when others then denied:=true; end; assert denied,'Ownership transfer allowed';
+denied:=false; begin update public.comments set task_id=gen_random_uuid() where id='55555555-5555-4555-8555-555555555555'; exception when others then denied:=true; end; assert denied,'Comment parent change allowed';
+end $$;
+set local request.jwt.claim.sub='22222222-2222-4222-8222-222222222222';
+do $$ declare n integer; denied boolean; begin
+update public.profiles set phone='UNAUTHORIZED' where id='11111111-1111-4111-8111-111111111111'; get diagnostics n=row_count; assert n=0,'Other profile update allowed';
+update public.issues set title='UNAUTHORIZED' where id='33333333-3333-4333-8333-333333333333'; get diagnostics n=row_count; assert n=0,'Other issue update allowed';
+update public.tasks set title='UNAUTHORIZED' where id='44444444-4444-4444-8444-444444444444'; get diagnostics n=row_count; assert n=0,'Assignee edited creator-owned task';
+update public.comments set body='UNAUTHORIZED' where id='55555555-5555-4555-8555-555555555555'; get diagnostics n=row_count; assert n=0,'Other comment update allowed';
+delete from public.issues where id='33333333-3333-4333-8333-333333333333'; get diagnostics n=row_count; assert n=0,'Other issue deletion allowed';
+delete from public.tasks where id='44444444-4444-4444-8444-444444444444'; get diagnostics n=row_count; assert n=0,'Other task deletion allowed';
+delete from public.comments where id='55555555-5555-4555-8555-555555555555'; get diagnostics n=row_count; assert n=0,'Other comment deletion allowed';
+denied:=false; begin insert into public.issues(owner_id,title,description) values('11111111-1111-4111-8111-111111111111','Forged','Must fail'); exception when insufficient_privilege then denied:=true; end; assert denied,'Forged issue owner accepted';
+denied:=false; begin insert into public.tasks(owner_id,assignee_id,title,description) values('11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222','Forged','Must fail'); exception when insufficient_privilege then denied:=true; end; assert denied,'Forged task owner accepted';
+denied:=false; begin insert into public.comments(owner_id,task_id,body) values('11111111-1111-4111-8111-111111111111','44444444-4444-4444-8444-444444444444','Must fail'); exception when insufficient_privilege then denied:=true; end; assert denied,'Forged comment owner accepted';
+insert into public.comments(owner_id,task_id,body) values('22222222-2222-4222-8222-222222222222','44444444-4444-4444-8444-444444444444','Member B can comment on a shared task');
+end $$;
+rollback;
+select 'PASS: own edits allowed; foreign edits/deletes and forged owners denied; immutable ownership enforced; fixture records rolled back' as result;
