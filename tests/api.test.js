@@ -1,0 +1,13 @@
+import {test,afterEach} from 'node:test';
+import assert from 'node:assert/strict';
+import {CommunityAPI} from '../public/api.js';
+const original=globalThis.fetch;
+afterEach(()=>globalThis.fetch=original);
+function client(){const m=new Map();return new CommunityAPI({supabaseUrl:'https://example.supabase.co',supabaseKey:'public-key'},{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)});}
+function response(body,status=200){return new Response(JSON.stringify(body),{status});}
+test('login persists a session and sends its token on database requests',async()=>{const api=client(),calls=[];globalThis.fetch=async(url,opts)=>{calls.push({url,opts});return response(calls.length===1?{access_token:'member-token',refresh_token:'refresh',expires_in:3600,user:{id:'alice'}}:[]);};await api.login('alice@example.com','password');await api.list('tasks');assert.equal(calls[1].opts.headers.Authorization,'Bearer member-token');assert.equal(calls[1].opts.headers.apikey,'public-key');assert.equal(api.session.user.id,'alice');});
+test('expired access tokens refresh before reading member data',async()=>{const api=client(),calls=[];api.save({access_token:'expired',refresh_token:'refresh',expires_at:0});globalThis.fetch=async(url,opts)=>{calls.push({url,opts});return response(url.includes('grant_type=refresh_token')?{access_token:'fresh',refresh_token:'new-refresh',expires_in:3600}:[]);};await api.list('profiles');assert.match(calls[0].url,/grant_type=refresh_token/);assert.equal(calls[1].opts.headers.Authorization,'Bearer fresh');});
+test('an RLS-filtered update is reported as unsaved',async()=>{const api=client();globalThis.fetch=async()=>response([]);await assert.rejects(()=>api.write('tasks',{title:'Someone else’s task'},'other-id'),/Nothing was saved/);});
+test('authentication errors preserve server message',async()=>{globalThis.fetch=async()=>response({msg:'Invalid login credentials'},400);await assert.rejects(()=>client().login('x@example.com','wrongpass'),/Invalid login credentials/);});
+test('logout clears the local session even if the network fails',async()=>{const api=client();api.save({access_token:'token',expires_at:Date.now()/1000+3600});globalThis.fetch=async()=>{throw Error('Offline');};await assert.rejects(()=>api.logout(),/Offline/);assert.equal(api.session,null);assert.equal(api.storage.getItem('cg-session'),null);});
+test('failed refresh clears session rather than retaining expired credentials',async()=>{const api=client();api.save({access_token:'expired',refresh_token:'bad',expires_at:0});globalThis.fetch=async()=>response({message:'Invalid Refresh Token'},400);await assert.rejects(()=>api.list('profiles'),/session expired/);assert.equal(api.session,null);});

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#174e43"><meta name="description" content="A shared home for your community's members, issues, and tasks.">
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-192.png"><link rel="stylesheet" href="./styles.css">
+  <title>CommonGround · Members</title>
+</head>
+<body>
+  <header><a class="brand" href="./"><span class="logo">cg</span> CommonGround</a><span class="tagline">A little more connected.</span><button id="install" hidden>Install app</button><button id="logout" hidden>Sign out</button></header>
+  <div id="connection" role="status" hidden>You're offline. Reconnect to access community data and save changes.</div>
+  <main>
+    <section id="welcome" class="welcome">
+      <div><span class="eyebrow">YOUR COMMUNITY, IN ONE PLACE</span><h1>Good things happen<br>when we pitch in.</h1><p>Know your neighbors. Raise an issue. Move a task forward.<br>A shared space for the people who make it happen.</p><div class="welcome-note"><span>↗</span> Small actions. Stronger communities.</div></div>
+      <div class="panel auth"><span class="eyebrow">WELCOME TO COMMONGROUND</span><h2 id="auth-title">Make yourself at home.</h2><p id="auth-copy">Sign in to connect with your community.</p>
+        <form id="auth-form"><label id="name-field" hidden>Your name<input name="name" maxlength="80" autocomplete="name"></label><label>Email address<input name="email" type="email" required maxlength="254" autocomplete="username" placeholder="you@example.com"></label><label>Password<input name="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password" placeholder="At least 8 characters"></label><button class="primary" type="submit" id="auth-submit">Sign in →</button></form><button class="text-button" id="auth-toggle">New here? Create an account</button><p class="small" id="setup-note" hidden>Deployment setup is needed. Add your Supabase project URL and public key to config.js, then run database/schema.sql in Supabase. See README.md.</p>
+      </div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="page-heading"><div><span class="eyebrow">THE COMMUNITY BOARD</span><h1 id="greeting">Welcome back.</h1><p>A place to keep in touch and get things done.</p></div><button id="refresh">↻ Refresh</button></div>
+      <div id="stats" class="stats"></div>
+      <nav aria-label="Community sections"><button data-view="tasks" class="active">Tasks</button><button data-view="issues">Issues</button><button data-view="members">Members</button><button data-view="profile">My profile</button></nav>
+      <div class="section-heading"><div><h2 id="view-title">Community tasks</h2><p id="view-description">A helping hand starts here.</p></div><button id="create" class="primary">+ New task</button></div>
+      <div id="filters"><input id="search" type="search" placeholder="Search this section…" aria-label="Search this section"><label class="inline"><input type="checkbox" id="mine"> Only mine</label></div>
+      <div id="content"></div>
+    </section>
+    <p id="message" role="status" aria-live="polite"></p>
+  </main>
+  <footer>CommonGround <span>Made for showing up, together.</span></footer>
+  <dialog id="editor"><div class="dialog-heading"><h2 id="editor-title"></h2><button id="close-editor" aria-label="Close dialog">✕</button></div><form id="edit-form"></form></dialog>
+  <script src="./config.js"></script><script type="module" src="./app.js"></script>
+</body></html>
