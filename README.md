@@ -2,9 +2,11 @@
 
 A buildless, responsive Members PWA for GitHub Pages. Uses Supabase Auth for unique email/password logins and PostgreSQL row level security (RLS) for server-enforced ownership. No npm dependencies or build step.
 
-**Current status:** source code is prepared; not deployed or connected to a backend. `public/config.js` must be configured before accounts/data work. No working login has been created yet.
+**Current status:** deployed at https://jj2cold23.github.io/members-app/ and connected to the existing Supabase project. Database tables, ownership policies, and immutable-field triggers were applied successfully. Signed-out API access is denied. Creation of the two classroom test accounts is awaiting approval; authenticated acceptance checks and the submission login are still pending.
 
-## Fastest setup
+## Setup reference (already completed for the live project)
+
+Do not create another Supabase project or rerun schema.sql against the existing database. These steps are for a fresh installation only.
 
 1. Create a free Supabase project at https://supabase.com/dashboard (keep the database password private).
 2. Run `database/schema.sql` once in its SQL Editor **before** creating users. This creates profiles automatically for new signups.
